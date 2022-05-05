@@ -1,3 +1,5 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from db import get_user, save_user, save_room, add_room_members, get_rooms_for_user, get_room, is_room_member, \
     get_room_members, is_room_admin, update_room, remove_room_members, save_message, get_messages
 from helper import *
@@ -8,8 +10,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from bson.json_util import dumps
 from keras.models import load_model
 from datetime import datetime
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+from bson.binary import Binary
+import pickle
+
 
 
 UPLOAD_FOLDER = './received/'
@@ -50,7 +53,7 @@ def hello():
         file = request.files['file']
         if 'file' not in request.files or file.filename == '':
             flash('No file part')
-            cryp = [plaintext, adv]
+            cryp = [plaintext, adv, cipher]
             return render_template('about.html', cryp=cryp)
         else:
             # if user does not select file, browser also
@@ -64,7 +67,7 @@ def hello():
                     './static/uploads/' + file.filename)
             dec_img, adv_img = decryptImage(enc_path, key, superkey)
 
-            cryp = [plaintext, adv, dec_img, adv_img, '/uploads/' + file.filename]
+            cryp = [plaintext, adv, cipher, dec_img, adv_img, '/uploads/' + file.filename]
 
     return render_template('about.html', cryp=cryp)
 
@@ -74,7 +77,7 @@ def home():
     rooms = []
     if current_user.is_authenticated:
         rooms = get_rooms_for_user(current_user.username)
-    return render_template("index.html")
+    return render_template("index.html", rooms=rooms)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -205,8 +208,11 @@ def handle_send_message_event(data):
                                                                     data['room'],
                                                                     data['message']))
     data['created_at'] = datetime.now().strftime("%d %b, %H:%M")
-    # data['message'] = encrypt(data['message'])
-    save_message(data['room'], data['message'], data['username'])
+    cipher, key = textEncryption(data['message'])
+    # record['feature2'] = Binary(pickle.dumps(npArray, protocol=2), subtype=128 )
+    data['cipher'] = Binary(pickle.dumps(cipher, protocol=2), subtype=128 )
+    data['key'] = Binary(pickle.dumps(key, protocol=2), subtype=128 )
+    save_message(data['room'], data['message'], data['username'],data['cipher'],data['key'])
     socketio.emit('receive_message', data, room=data['room'])
 
 

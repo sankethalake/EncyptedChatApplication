@@ -75,8 +75,8 @@ def is_room_admin(room_id, username):
         {'_id': {'room_id': ObjectId(room_id), 'username': username}, 'is_room_admin': True})
 
 
-def save_message(room_id, text, sender):
-    messages_collection.insert_one({'room_id': room_id, 'text': text, 'sender': sender, 'created_at': datetime.now()})
+def save_message(room_id, text, sender, cipher, secretkey):
+    messages_collection.insert_one({'room_id': room_id, 'text': text, 'sender': sender, 'created_at': datetime.now(), 'cipher': cipher, 'secretkey': secretkey})
 
 
 MESSAGE_FETCH_LIMIT = 3

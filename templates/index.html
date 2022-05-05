@@ -5,6 +5,7 @@
     <title>My Chat App</title>
 </head>
 <body>
+
 <h1>My Chat App</h1>
 <h3>Hi {% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Guest{% endif %}!</h3>
 
@@ -16,5 +17,10 @@
         {% endfor %}
     </ul>
 {% endif %}
+
+<button onclick="window.location.href='/login'">Login</button>
+<button onclick="window.location.href='/about'">About</button>
+<button onclick="window.location.href='/create-room'">Create Room</button>
+<!-- <button onclick="window.location.href='/login'">Login</button> -->
 </body>
 </html>

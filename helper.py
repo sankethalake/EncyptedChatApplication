@@ -341,3 +341,11 @@ def decryptImage(imageName,cipher,superkey):
     adv_image = LogisticDecryption(imageName,adv, "eve")
 
     return dec_image[8:],adv_image[8:]      
+
+def textEncryption(raw_message):
+    messages = processRawMessage(raw_message)
+    '''Do not remove tolist(). Used to convert numpy array to json compatible format. To undo use np.array(data['cipher'])'''
+    message = messages[0]
+    key = messages[1]
+    cipher = alice.predict([message, key])
+    return cipher,key
