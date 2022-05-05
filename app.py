@@ -39,40 +39,42 @@ def hello():
         messages = processRawMessage(raw_message)
         message = messages[0]
         key = messages[1]
-
+        print(request.url)
         cipher = alice.predict([message, key])
         decipher = (bob.predict([cipher, key]) > 0.5).astype(int)
         adversary = (eve.predict(cipher) > 0.5).astype(int)
 
         plaintext = processBinaryMessage(decipher)
         adv = processBinaryMessage(adversary)
-
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
+        
         file = request.files['file']
-        # if user does not select file, browser also
-        # submit a empty part without filename
-        if file.filename == '':
-            # flash('No selected file')
-            return redirect(request.url)
+        if 'file' not in request.files or file.filename == '':
+            flash('No file part')
+            cryp = [plaintext, adv]
+            return render_template('about.html', cryp=cryp)
         else:
+            # if user does not select file, browser also
+            # submit a empty part without filename
+            # if file.filename == '':
+            #     # flash('No selected file')
+            #     print(request.url)
+            #     return redirect(request.url)
             file.save('./static/uploads/' + file.filename)
             enc_path, key, superkey = encryptImage(
-                './static/uploads/' + file.filename)
+                    './static/uploads/' + file.filename)
             dec_img, adv_img = decryptImage(enc_path, key, superkey)
 
-        cryp = [plaintext, adv, dec_img, adv_img, '/uploads/' + file.filename]
+            cryp = [plaintext, adv, dec_img, adv_img, '/uploads/' + file.filename]
 
-    return render_template('home.html', cryp=cryp)
+    return render_template('about.html', cryp=cryp)
 
 
-@app.route('/')
+@app.route('/',methods=['GET', 'POST'])
 def home():
     rooms = []
-    if current_user.is_authenticated():
+    if current_user.is_authenticated:
         rooms = get_rooms_for_user(current_user.username)
-    return render_template("index.html", rooms=rooms)
+    return render_template("index.html")
 
 
 @app.route('/login', methods=['GET', 'POST'])
