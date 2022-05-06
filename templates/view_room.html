@@ -14,6 +14,11 @@
         <div><b>{{ message.sender }}&nbsp;[{{ message.created_at }}]:&nbsp;</b> {{ message.text }}</div>
     {% endfor %}
 </div>
+<div id="messages">
+    {% for message in messages %}
+        <div>eve&nbsp;[{{ message.created_at }}] : {{message.eve}}</div>
+    {% endfor %}
+</div>
 
 <form id="message_input_form">
     <input type="text" id="message_input" placeholder="Enter your message here">

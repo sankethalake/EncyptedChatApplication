@@ -1,18 +1,17 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import pickle
+from bson.binary import Binary
+from datetime import datetime
+from keras.models import load_model
+from bson.json_util import dumps
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from flask_socketio import SocketIO, join_room, leave_room
+from pymongo.errors import DuplicateKeyError
+from helper import *
 from db import get_user, save_user, save_room, add_room_members, get_rooms_for_user, get_room, is_room_member, \
     get_room_members, is_room_admin, update_room, remove_room_members, save_message, get_messages
-from helper import *
-from pymongo.errors import DuplicateKeyError
-from flask_socketio import SocketIO, join_room, leave_room
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from flask import Flask, render_template, request, redirect, url_for, flash
-from bson.json_util import dumps
-from keras.models import load_model
-from datetime import datetime
-from bson.binary import Binary
-import pickle
-
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 UPLOAD_FOLDER = './received/'
@@ -49,7 +48,7 @@ def hello():
 
         plaintext = processBinaryMessage(decipher)
         adv = processBinaryMessage(adversary)
-        
+
         file = request.files['file']
         if 'file' not in request.files or file.filename == '':
             flash('No file part')
@@ -64,15 +63,16 @@ def hello():
             #     return redirect(request.url)
             file.save('./static/uploads/' + file.filename)
             enc_path, key, superkey = encryptImage(
-                    './static/uploads/' + file.filename)
+                './static/uploads/' + file.filename)
             dec_img, adv_img = decryptImage(enc_path, key, superkey)
 
-            cryp = [plaintext, adv, cipher, dec_img, adv_img, '/uploads/' + file.filename]
+            cryp = [plaintext, adv, cipher, dec_img,
+                    adv_img, '/uploads/' + file.filename]
 
     return render_template('about.html', cryp=cryp)
 
 
-@app.route('/',methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def home():
     rooms = []
     if current_user.is_authenticated:
@@ -183,7 +183,7 @@ def view_room(room_id):
     room = get_room(room_id)
     if room and is_room_member(room_id, current_user.username):
         room_members = get_room_members(room_id)
-        messages = get_messages(room_id)
+        messages, received_message = get_messages(room_id)
         return render_template('view_room.html', username=current_user.username, room=room, room_members=room_members,
                                messages=messages)
     else:
@@ -196,7 +196,7 @@ def get_older_messages(room_id):
     room = get_room(room_id)
     if room and is_room_member(room_id, current_user.username):
         page = int(request.args.get('page', 0))
-        messages = get_messages(room_id, page)
+        messages, received_message = get_messages(room_id, page)
         return dumps(messages)
     else:
         return "Room not found", 404
@@ -209,10 +209,17 @@ def handle_send_message_event(data):
                                                                     data['message']))
     data['created_at'] = datetime.now().strftime("%d %b, %H:%M")
     cipher, key = textEncryption(data['message'])
+    eve_dec = eveTextDecryption(cipher)
+    print(eve_dec)
+    # data['eve'] = Binary(pickle.dumps(eve_dec, protocol=2), subtype=128)
+    data['eve'] = eve_dec
     # record['feature2'] = Binary(pickle.dumps(npArray, protocol=2), subtype=128 )
-    data['cipher'] = Binary(pickle.dumps(cipher, protocol=2), subtype=128 )
-    data['key'] = Binary(pickle.dumps(key, protocol=2), subtype=128 )
-    save_message(data['room'], data['message'], data['username'],data['cipher'],data['key'])
+    data['cipher'] = Binary(pickle.dumps(cipher, protocol=2), subtype=128)
+    data['key'] = Binary(pickle.dumps(key, protocol=2), subtype=128)
+    # print(data)
+    # print(data['cipher'])
+    save_message(data['room'], data['message'],
+                 data['username'], data['cipher'], data['key'], data['eve'])
     socketio.emit('receive_message', data, room=data['room'])
 
 
@@ -235,15 +242,6 @@ def handle_leave_room_event(data):
 @login_manager.user_loader
 def load_user(username):
     return get_user(username)
-
-
-'''
-def encrypt(raw_message):
-    messages = processRawMessage(raw_message)
-    message = messages[0]
-    key = messages[1]
-    cipher = alice.predict([message, key] > 0.5).astype(int)
-    return cipher'''
 
 
 if __name__ == '__main__':
