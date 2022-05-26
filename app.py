@@ -130,15 +130,13 @@ def create_room():
     message = ''
     if request.method == 'POST':
         room_name = request.form.get('room_name')
-        usernames = [username.strip()
-                     for username in request.form.get('members').split(',')]
+        usernames = [username.strip() for username in request.form.get('members').split(',')]
 
         if len(room_name) and len(usernames):
             room_id = save_room(room_name, current_user.username)
             if current_user.username in usernames:
                 usernames.remove(current_user.username)
-            add_room_members(room_id, room_name, usernames,
-                             current_user.username)
+            add_room_members(room_id, room_name, usernames, current_user.username)
             return redirect(url_for('view_room', room_id=room_id))
         else:
             message = "Failed to create room"

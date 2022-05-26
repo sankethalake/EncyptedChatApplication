@@ -8,8 +8,11 @@ from werkzeug.security import generate_password_hash
 from helper import *
 from user import User
 
+# client = MongoClient(
+#     "mongodb+srv://test:test@chatapp-q7wkc.mongodb.net/test?retryWrites=true&w=majority")
+
 client = MongoClient(
-    "mongodb+srv://test:test@chatapp-q7wkc.mongodb.net/test?retryWrites=true&w=majority")
+    "mongodb+srv://test:test@test-chatapp.espw3.mongodb.net/?retryWrites=true&w=majority")
 
 chat_db = client.get_database("ChatDB")
 users_collection = chat_db.get_collection("users")
@@ -55,9 +58,10 @@ def add_room_member(room_id, room_name, username, added_by, is_room_admin=False)
 
 
 def add_room_members(room_id, room_name, usernames, added_by):
-    room_members_collection.insert_many(
-        [{'_id': {'room_id': ObjectId(room_id), 'username': username}, 'room_name': room_name, 'added_by': added_by,
-          'added_at': datetime.now(), 'is_room_admin': False} for username in usernames])
+    if usernames:
+        room_members_collection.insert_many(
+            [{'_id': {'room_id': ObjectId(room_id), 'username': username}, 'room_name': room_name, 'added_by': added_by,
+            'added_at': datetime.now(), 'is_room_admin': False} for username in usernames])
 
 
 def remove_room_members(room_id, usernames):
